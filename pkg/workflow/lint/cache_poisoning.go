@@ -3,7 +3,6 @@ package lint
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -87,7 +86,7 @@ func cacheReleaseTrigger(ctx context.Context, on any) (bool, error) {
 func actionRestoresCache(ctx context.Context, fields map[string]any, path string) (bool, error) {
 	name := actionName(fields["uses"])
 	switch name {
-	case "actions/cache", "actions/cache/restore", "actions/setup-go", "actions/setup-node":
+	case "actions/cache", "actions/cache/restore", "actions/setup-go", "actions/setup-node", "actions/setup-python", "actions/setup-java":
 	default:
 		return false, nil
 	}
@@ -103,15 +102,23 @@ func actionRestoresCache(ctx context.Context, fields map[string]any, path string
 		defaultEnabled = !actionMajorBefore(fields["uses"], 4)
 	case "actions/setup-node":
 		if value, explicit := with["cache"]; explicit && value != nil {
-			text, ok := value.(string)
-			if !ok {
-				return false, fmt.Errorf("cache-poisoning requires a string at %s.with.cache; correct the action inputs before linting", path)
-			}
-			if text != "" {
-				return true, nil
+			if enabled, ok, err := setupCacheEnabled(value, path+".with.cache"); err != nil {
+				return false, err
+			} else if ok {
+				return enabled, nil
 			}
 		}
 		flag, defaultEnabled = "package-manager-cache", !actionMajorBefore(fields["uses"], 5)
+	case "actions/setup-python", "actions/setup-java":
+		defaultEnabled = false
+		if value, explicit := with["cache"]; explicit && value != nil {
+			if enabled, ok, err := setupCacheEnabled(value, path+".with.cache"); err != nil {
+				return false, err
+			} else if ok {
+				return enabled, nil
+			}
+		}
+		return defaultEnabled, nil
 	}
 	value, explicit := with[flag]
 	if !explicit {
@@ -128,6 +135,34 @@ func actionRestoresCache(ctx context.Context, fields map[string]any, path string
 		enabled = !enabled
 	}
 	return enabled, nil
+}
+
+func setupCacheEnabled(value any, path string) (bool, bool, error) {
+	if text, ok := value.(string); ok {
+		trimmed := strings.TrimSpace(text)
+		if trimmed == "" {
+			return false, true, nil
+		}
+		lower := strings.ToLower(trimmed)
+		if lower == "false" || lower == "no" {
+			return false, true, nil
+		}
+		if lower == "true" || lower == "yes" {
+			return true, true, nil
+		}
+		return true, true, nil
+	}
+	if value == nil {
+		return false, true, nil
+	}
+	enabled, known, err := actionInputBoolean(context.Background(), value, path)
+	if err != nil {
+		return false, false, err
+	}
+	if known {
+		return enabled, true, nil
+	}
+	return true, false, nil
 }
 
 // SHA-pinned setup actions have unknown major versions here. Their default
