@@ -71,7 +71,7 @@ func checkPushTarget(ctx context.Context, input Input) ([]Diagnostic, error) {
 	if err != nil || config == nil {
 		return nil, err
 	}
-	if target, ok := config["target"].(string); !ok || target != "*" {
+	if target, ok := config["target"].(string); !ok || strings.TrimSpace(target) != "*" {
 		return nil, nil
 	}
 	constrained, err := pushPolicyConstraints(ctx, config)
@@ -98,7 +98,7 @@ func pushPolicyConstraints(ctx context.Context, config map[string]any) (bool, er
 			if !ok {
 				return false, fmt.Errorf("push-target requires a literal string at safe-outputs.push-to-pull-request-branch.%s", key)
 			}
-			constrained = constrained || text != ""
+			constrained = constrained || strings.TrimSpace(text) != ""
 		}
 	}
 	for _, key := range []string{"required-labels", "labels"} {
@@ -114,7 +114,14 @@ func pushPolicyConstraints(ctx context.Context, config map[string]any) (bool, er
 		if err != nil {
 			return false, err
 		}
-		constrained = constrained || len(labels) > 0
+		nonEmpty := false
+		for _, label := range labels {
+			if strings.TrimSpace(label) != "" {
+				nonEmpty = true
+				break
+			}
+		}
+		constrained = constrained || nonEmpty
 	}
 	return constrained, ctx.Err()
 }

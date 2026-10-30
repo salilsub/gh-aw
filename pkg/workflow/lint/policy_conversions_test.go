@@ -96,6 +96,8 @@ func TestPushTargetRule(t *testing.T) {
 		{"labels: [automated]", 0},
 		{"required-labels: []\n    labels: [automated]", 0},
 		{"required-labels: ['*']", 0},
+		{"required-labels: ['  ']", 1},
+		{"required-title-prefix: '  '", 1},
 		{"required-labels: '${{ inputs.labels }}'", 0},
 		{"required-title-prefix: ''\n    required-labels: []", 1},
 	} {
