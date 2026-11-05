@@ -59,6 +59,8 @@ func TestZizmorReleaseCaches(t *testing.T) {
 		{"old Go default", "release", "actions/setup-go@v3", "", false},
 		{"old Go explicit", "release", "actions/setup-go@v3", "cache: true", true},
 		{"pinned Go unknown default", "release", "actions/setup-go@0123456789abcdef0123456789abcdef01234567", "", true},
+		{"release Python explicit", "release", "actions/setup-python@v6", "cache: pip", true},
+		{"release Java explicit", "release", "actions/setup-java@v6", "cache: maven", true},
 		{"tag Node default", "{push: {tags: ['v*']}}", "actions/setup-node@v6", "", true},
 		{"mixed tag and branch", "{push: {tags: ['v*'], branches: [main]}}", "actions/setup-node@v6", "", true},
 		{"tag Node disabled", "{push: {tags: ['v*']}}", "actions/setup-node@v6", "package-manager-cache: false", false},
